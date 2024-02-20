@@ -3,26 +3,20 @@ import { userDatabase } from "../dataBases/users";
 import { winnersDatabase } from "../dataBases/winners";
 import { User } from "../interfaces/user";
 
-export const messageHandler = (data: string, userIndex: number) => {
-  const userData: ReceiveData = JSON.parse(data);
-
-  switch (userData.type) {
-    case "reg":
-      return getRegisterResponse(userData.data);
-    case "create_room":
-      const currentUser = userDatabase.getUserByIndex(userIndex);
-      if (currentUser) {
-        roomsDatabase.createRoom(currentUser);
-      }
-      return getUpdateRoomsResponse();
-
-    case "add_ships":
-      break;
-    case "attack":
-      break;
-  }
+export const getCreateGameResponse = (
+  idGame: number,
+  idPlayer: number
+): ResponseData => {
+  const gameData = {
+    idGame,
+    idPlayer,
+  };
+  return {
+    type: "create_game",
+    data: JSON.stringify(gameData),
+    id: 0,
+  };
 };
-
 export const getUpdateRoomsResponse = (): ResponseData => {
   return {
     type: "update_room",
@@ -65,7 +59,12 @@ export const getRegisterResponse = (userData: string): ResponseData => {
   };
 };
 
-type UserMessageType = "reg" | "create_room" | "add_ships" | "attack";
+type UserMessageType =
+  | "reg"
+  | "create_room"
+  | "add_ships"
+  | "attack"
+  | "add_user_to_room";
 type ServerMessageType =
   | "turn"
   | "reg"
@@ -75,19 +74,19 @@ type ServerMessageType =
   | "attack"
   | "update_winners"
   | "update_room";
-interface ReceiveData {
+export interface ReceivedMessage {
   type: UserMessageType;
   data: string;
   id: 0;
 }
 
-interface ResponseData {
+export interface ResponseData {
   type: ServerMessageType;
   data: string;
   id: 0;
 }
 
-interface RegisterResponse {
+export interface RegisterResponse {
   name: string;
   index: number;
   error: boolean;

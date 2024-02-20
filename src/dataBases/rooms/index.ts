@@ -5,14 +5,14 @@ class RoomsDatabase {
 
   createRoom = (user: User): void => {
     const newRoom: Room = {
-      roomID: this.data.length + 1,
+      roomId: this.data.length + 1,
       roomUsers: [user],
     };
     this.data.push(newRoom);
   };
 
   addUserToRoom = (indexRoom: number, user: Omit<User, "password">) => {
-    this.data[indexRoom].roomUsers.push(user);
+    this.data[indexRoom - 1].roomUsers.push(user);
   };
 
   get getAvailableRoomList() {
@@ -21,7 +21,7 @@ class RoomsDatabase {
 }
 
 interface Room {
-  roomID: number;
+  roomId: number;
   roomUsers: Omit<User, "password">[];
 }
 
