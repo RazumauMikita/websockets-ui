@@ -3,9 +3,9 @@ import { userDatabase } from "../dataBases/users";
 import { winnersDatabase } from "../dataBases/winners";
 import { User } from "../interfaces/user";
 
-export const getCreateGameResponse = (
+export const getCreateGameData = (
   idGame: number,
-  idPlayer: number
+  idPlayer: string
 ): ResponseData => {
   const gameData = {
     idGame,
@@ -17,7 +17,7 @@ export const getCreateGameResponse = (
     id: 0,
   };
 };
-export const getUpdateRoomsResponse = (): ResponseData => {
+export const getUpdateRoomsData = (): ResponseData => {
   return {
     type: "update_room",
     data: JSON.stringify(roomsDatabase.getAvailableRoomList),
@@ -25,19 +25,19 @@ export const getUpdateRoomsResponse = (): ResponseData => {
   };
 };
 
-export const getUpdateWinnersResponse = (): ResponseData => {
+export const getUpdateWinnersData = (): ResponseData => {
   return {
     type: "update_winners",
     data: JSON.stringify(winnersDatabase.getWinners),
     id: 0,
   };
 };
-export const getRegisterResponse = (userData: string): ResponseData => {
+export const getRegisterData = (userData: string): ResponseData => {
   const user = JSON.parse(userData as string) as Omit<User, "id">;
 
   const requestBody: RegisterResponse = {
     name: user.name,
-    index: 0,
+    index: "",
     error: false,
     errorText: "",
   };
@@ -88,7 +88,7 @@ export interface ResponseData {
 
 export interface RegisterResponse {
   name: string;
-  index: number;
+  index: string;
   error: boolean;
   errorText: string;
 }

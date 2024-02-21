@@ -8,16 +8,16 @@ class UserDatabase {
   addNewUser = (user: Omit<User, "id">): void => {
     const newUser: User = {
       ...user,
-      index: this.data.length + 1,
+      index: uuid(),
     };
     this.data.push(newUser);
   };
 
   getUserIndex = (user: Omit<User, "id">) => {
-    return this.getUserFromBase(user)?.index || 0;
+    return this.getUserFromBase(user)?.index || "";
   };
 
-  getUserByIndex = (userIndex: number) => {
+  getUserByIndex = (userIndex: string) => {
     return this.data.find((elem) => elem.index === userIndex);
   };
 
