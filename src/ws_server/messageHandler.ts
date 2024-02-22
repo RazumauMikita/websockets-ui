@@ -1,7 +1,34 @@
+import { Ship } from "../dataBases/games";
 import { roomsDatabase } from "../dataBases/rooms";
 import { userDatabase } from "../dataBases/users";
 import { winnersDatabase } from "../dataBases/winners";
 import { User } from "../interfaces/user";
+
+export const getTurnData = (playerId: string): ResponseData => {
+  const turnData = {
+    currentPlayer: playerId,
+  };
+  return {
+    type: "turn",
+    data: JSON.stringify(turnData),
+    id: 0,
+  };
+};
+
+export const getStartGameData = (
+  ships: Ship[],
+  playerIndex: string
+): ResponseData => {
+  const startGameData = {
+    ships: ships,
+    currentPlayerIndex: playerIndex,
+  };
+  return {
+    type: "start_game",
+    data: JSON.stringify(startGameData),
+    id: 0,
+  };
+};
 
 export const getCreateGameData = (
   idGame: number,

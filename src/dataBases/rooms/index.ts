@@ -1,7 +1,7 @@
 import { User } from "../../interfaces/user";
 
 class RoomsDatabase {
-  private data: Room[] = [];
+  public data: Room[] = [];
 
   createRoom = (user: User): void => {
     const newRoom: Room = {

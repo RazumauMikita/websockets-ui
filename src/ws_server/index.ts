@@ -4,20 +4,19 @@ import {
   ResponseData,
   getCreateGameData,
   getRegisterData,
+  getStartGameData,
+  getTurnData,
   getUpdateRoomsData,
   getUpdateWinnersData,
 } from "./messageHandler";
 import { userDatabase } from "../dataBases/users";
 import { roomsDatabase } from "../dataBases/rooms";
 import { IncomingMessage } from "http";
+import { User } from "../interfaces/user";
+import { Game, Player, Ship, gamesDatabase } from "../dataBases/games";
 
 interface IndexRoom {
   indexRoom: number;
-}
-
-interface Game {
-  gameId: number;
-  playersId: number[];
 }
 
 const games: Game[] = [];
@@ -83,17 +82,47 @@ export const wssMessageHandler = () => {
           const roomData = JSON.parse(userMessage.data) as IndexRoom;
           if (currentUser) {
             roomsDatabase.addUserToRoom(roomData.indexRoom, currentUser);
+            sendResponseToAllUsers(wss, getUpdateRoomsData());
+            const room = roomsDatabase.getRoomById(roomData.indexRoom);
+
+            const players: Player[] = [
+              { user: room.roomUsers[0] },
+              { user: room.roomUsers[1] },
+            ];
+            const gameId = gamesDatabase.createNewGame(players);
+            room.roomUsers.forEach((elem) => {
+              sendResponseToUserById(
+                elem.index,
+                getCreateGameData(gameId, elem.index)
+              );
+            });
           }
-          const room = roomsDatabase.getRoomById(roomData.indexRoom);
-          room.roomUsers.forEach((elem) => {
-            sendResponseToUserById(
-              elem.index,
-              getCreateGameData(1, currentUserIndex)
-            );
-          });
 
           break;
         case "add_ships":
+          const addShipsData = JSON.parse(userMessage.data) as AddShipsData;
+          const { gameId, ships, indexPlayer } = addShipsData;
+          gamesDatabase.addShipsToPlayer(ships, gameId, indexPlayer);
+          console.log(indexPlayer);
+          roomsDatabase.data.forEach((elem) => {
+            console.log(elem.roomUsers);
+          });
+          if (gamesDatabase.isGameReady(gameId)) {
+            gamesDatabase.data[gameId].players.forEach((elem) => {
+              if (elem.ships) {
+                sendResponseToUserById(
+                  elem.user.index,
+                  getStartGameData(elem.ships, elem.user.index)
+                );
+              }
+            });
+            gamesDatabase.data[gameId].players.forEach((elem) => {
+              sendResponseToUserById(
+                elem.user.index,
+                getTurnData(currentUser?.index || "")
+              );
+            });
+          }
           break;
         case "attack":
           break;
@@ -101,3 +130,9 @@ export const wssMessageHandler = () => {
     });
   });
 };
+
+interface AddShipsData {
+  gameId: number;
+  ships: Ship[];
+  indexPlayer: string;
+}
