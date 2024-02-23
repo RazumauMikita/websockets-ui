@@ -1,9 +1,41 @@
 import { Ship } from "../dataBases/games";
+import { AttackStatus } from "../dataBases/games/gameBoard";
 import { roomsDatabase } from "../dataBases/rooms";
 import { userDatabase } from "../dataBases/users";
 import { winnersDatabase } from "../dataBases/winners";
 import { User } from "../interfaces/user";
 
+interface Position {
+  x: number;
+  y: number;
+}
+
+export const getFinishGameData = (winPlayer: string): ResponseData => {
+  const finishGameData = {
+    winPlayer,
+  };
+  return {
+    type: "finish",
+    data: JSON.stringify(finishGameData),
+    id: 0,
+  };
+};
+export const getAttackData = (
+  position: Position,
+  currentPlayer: string,
+  status: AttackStatus
+): ResponseData => {
+  const attackData = {
+    position,
+    currentPlayer,
+    status,
+  };
+  return {
+    type: "attack",
+    data: JSON.stringify(attackData),
+    id: 0,
+  };
+};
 export const getTurnData = (playerId: string): ResponseData => {
   const turnData = {
     currentPlayer: playerId,

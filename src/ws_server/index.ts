@@ -2,7 +2,9 @@ import WebSocket, { WebSocketServer } from "ws";
 import {
   ReceivedMessage,
   ResponseData,
+  getAttackData,
   getCreateGameData,
+  getFinishGameData,
   getRegisterData,
   getStartGameData,
   getTurnData,
@@ -14,6 +16,7 @@ import { roomsDatabase } from "../dataBases/rooms";
 import { IncomingMessage } from "http";
 import { User } from "../interfaces/user";
 import { Game, Player, Ship, gamesDatabase } from "../dataBases/games";
+import { winnersDatabase } from "../dataBases/winners";
 
 interface IndexRoom {
   indexRoom: number;
@@ -103,10 +106,7 @@ export const wssMessageHandler = () => {
           const addShipsData = JSON.parse(userMessage.data) as AddShipsData;
           const { gameId, ships, indexPlayer } = addShipsData;
           gamesDatabase.addShipsToPlayer(ships, gameId, indexPlayer);
-          console.log(indexPlayer);
-          roomsDatabase.data.forEach((elem) => {
-            console.log(elem.roomUsers);
-          });
+
           if (gamesDatabase.isGameReady(gameId)) {
             gamesDatabase.data[gameId].players.forEach((elem) => {
               if (elem.ships) {
@@ -125,12 +125,57 @@ export const wssMessageHandler = () => {
           }
           break;
         case "attack":
+          const attackData = JSON.parse(userMessage.data) as AttackData;
+          const { x, y, gameId: gameIndex, indexPlayer: playerId } = attackData;
+          const currentGame = gamesDatabase.data[gameIndex];
+          const enemyId = gamesDatabase.getEnemyIndex(playerId, gameIndex);
+          const attackResult = currentGame.players[
+            enemyId
+          ].board?.getAttackResult(x, y);
+          const isNeedFinishGame =
+            currentGame.players[enemyId].board?.isPlayerLoose();
+
+          if (isNeedFinishGame) {
+            currentGame.players.forEach((elem) => {
+              sendResponseToUserById(
+                elem.user.index,
+                getFinishGameData(playerId)
+              );
+            });
+            winnersDatabase.updateWinners(
+              userDatabase.getUserByIndex(playerId)?.name || ""
+            );
+            sendResponseToAllUsers(wss, getUpdateWinnersData());
+          }
+
+          if (attackResult) {
+            const nextTurn =
+              attackResult === "miss"
+                ? currentGame.players[enemyId].user.index
+                : playerId;
+            currentGame.players.forEach((elem) => {
+              sendResponseToUserById(
+                elem.user.index,
+                getAttackData({ x, y }, playerId, attackResult)
+              );
+            });
+            currentGame.players.forEach((elem) => {
+              sendResponseToUserById(elem.user.index, getTurnData(nextTurn));
+            });
+          }
+
+          console.log(attackResult);
           break;
       }
     });
   });
 };
-
+export interface AttackData {
+  x: number;
+  y: number;
+  gameId: number;
+  indexPlayer: string;
+}
 interface AddShipsData {
   gameId: number;
   ships: Ship[];
