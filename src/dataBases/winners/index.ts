@@ -1,3 +1,8 @@
+interface Winner {
+  name: string;
+  wins: number;
+}
+
 class WinnersDatabase {
   private data: Winner[] = [];
 
@@ -8,16 +13,14 @@ class WinnersDatabase {
       this.data[winnerIndex].wins += 1;
     } else {
       const newWinner: Winner = {
-        name: name,
+        name,
         wins: 1,
       };
       this.data.push(newWinner);
     }
   };
 
-  getWinner = (name: string): Winner | undefined => {
-    return this.data.find((elem) => elem.name === name);
-  };
+  getWinner = (name: string): Winner | undefined => this.data.find((elem) => elem.name === name);
 
   get getWinners() {
     return this.data;
@@ -25,8 +28,3 @@ class WinnersDatabase {
 }
 
 export const winnersDatabase = new WinnersDatabase();
-
-interface Winner {
-  name: string;
-  wins: number;
-}

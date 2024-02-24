@@ -1,4 +1,9 @@
-import { User } from "../../interfaces/user";
+import { User } from '../../interfaces/user';
+
+interface Room {
+  roomId: number;
+  roomUsers: Omit<User, 'password'>[];
+}
 
 class RoomsDatabase {
   public data: Room[] = [];
@@ -12,13 +17,11 @@ class RoomsDatabase {
     return this.data.length - 1;
   };
 
-  addUserToRoom = (indexRoom: number, user: Omit<User, "password">) => {
+  addUserToRoom = (indexRoom: number, user: Omit<User, 'password'>) => {
     this.data[indexRoom - 1].roomUsers.push(user);
   };
 
-  isHaveUserRoom = (user: User) => {
-    return this.data.some((elem) => elem.roomUsers[0].index === user.index);
-  };
+  isHaveUserRoom = (user: User) => this.data.some((elem) => elem.roomUsers[0].index === user.index);
 
   removeUserRoom = (roomIndex: number) => {
     delete this.data[roomIndex];
@@ -28,16 +31,9 @@ class RoomsDatabase {
     return this.data[roomId - 1];
   }
 
-  get getAvailableRoomList() {
-    if (this.data.length) {
-      return this.data.filter((elem) => elem.roomUsers.length === 1);
-    }
+  getAvailableRoomList() {
+    return this.data.filter((elem) => elem.roomUsers.length === 1) || '';
   }
-}
-
-interface Room {
-  roomId: number;
-  roomUsers: Omit<User, "password">[];
 }
 
 export const roomsDatabase = new RoomsDatabase();
