@@ -1,5 +1,5 @@
-import WebSocket, { WebSocketServer } from 'ws';
-import { IncomingMessage } from 'http';
+import WebSocket, { WebSocketServer } from "ws";
+import { IncomingMessage } from "http";
 import {
   ReceivedMessage,
   ResponseData,
@@ -11,12 +11,12 @@ import {
   getTurnData,
   getUpdateRoomsData,
   getUpdateWinnersData,
-} from './messageHandler';
-import { userDatabase } from '../dataBases/users';
-import { roomsDatabase } from '../dataBases/rooms';
-import { Player, gamesDatabase } from '../dataBases/games';
-import { winnersDatabase } from '../dataBases/winners';
-import { Ship } from '../dataBases/games/gameBoard';
+} from "./messageHandler";
+import { userDatabase } from "../dataBases/users";
+import { roomsDatabase } from "../dataBases/rooms";
+import { Player, gamesDatabase } from "../dataBases/games";
+import { winnersDatabase } from "../dataBases/winners";
+import { Ship } from "../dataBases/games/gameBoard";
 
 export interface AttackData {
   x: number;
@@ -43,7 +43,7 @@ const sendResponseToUserById = (userIndex: string, response: ResponseData) => {
 
 const sendResponseToAllUsers = (
   wss: WebSocket.Server<typeof WebSocket, typeof IncomingMessage>,
-  response: ResponseData,
+  response: ResponseData
 ) => {
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
@@ -55,14 +55,14 @@ const sendResponseToAllUsers = (
 export const wssMessageHandler = () => {
   const wss = new WebSocketServer({ port: 3000 });
 
-  wss.on('connection', (ws, req) => {
-    let currentUserIndex: string = '';
+  wss.on("connection", (ws, req) => {
+    let currentUserIndex: string = "";
 
     process.stdout.write(`connect websocket url: ws:/${req.url}\n`);
 
-    ws.on('close', () => {
+    ws.on("close", () => {
       const user = userDatabase.getUserByIndex(currentUserIndex);
-      if (user && typeof user.userRoomId === 'number') {
+      if (user && typeof user.userRoomId === "number") {
         roomsDatabase.removeUserRoom(user.userRoomId);
         sendResponseToAllUsers(wss, getUpdateRoomsData());
       }
@@ -70,12 +70,12 @@ export const wssMessageHandler = () => {
       ws.close();
     });
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       const userMessage: ReceivedMessage = JSON.parse(data.toString());
       const currentUser = userDatabase.getUserByIndex(currentUserIndex);
 
       switch (userMessage.type) {
-        case 'reg': {
+        case "reg": {
           const registerResponseMessage = getRegisterData(userMessage.data);
           currentUserIndex = JSON.parse(registerResponseMessage.data).index;
           usersSockets.set(currentUserIndex, ws);
@@ -87,8 +87,8 @@ export const wssMessageHandler = () => {
           break;
         }
 
-        case 'create_room': {
-          if (currentUser && !roomsDatabase.isHaveUserRoom(currentUser)) {
+        case "create_room": {
+          if (currentUser && !currentUser.userRoomId) {
             const newRoomIndex: number = roomsDatabase.createRoom(currentUser);
             currentUser.userRoomId = newRoomIndex;
           }
@@ -96,7 +96,7 @@ export const wssMessageHandler = () => {
           break;
         }
 
-        case 'add_user_to_room': {
+        case "add_user_to_room": {
           const roomData = JSON.parse(userMessage.data) as IndexRoom;
           if (currentUser) {
             const room = roomsDatabase.getRoomById(roomData.indexRoom);
@@ -112,7 +112,7 @@ export const wssMessageHandler = () => {
             room.roomUsers.forEach((elem) => {
               sendResponseToUserById(
                 elem.index,
-                getCreateGameData(gameId, elem.index),
+                getCreateGameData(gameId, elem.index)
               );
             });
           }
@@ -120,7 +120,7 @@ export const wssMessageHandler = () => {
           break;
         }
 
-        case 'add_ships': {
+        case "add_ships": {
           const addShipsData = JSON.parse(userMessage.data) as AddShipsData;
           const { gameId, ships, indexPlayer } = addShipsData;
           gamesDatabase.addShipsToPlayer(ships, gameId, indexPlayer);
@@ -130,22 +130,22 @@ export const wssMessageHandler = () => {
               if (elem.ships) {
                 sendResponseToUserById(
                   elem.user.index,
-                  getStartGameData(elem.ships, elem.user.index),
+                  getStartGameData(elem.ships, elem.user.index)
                 );
               }
             });
             gamesDatabase.data[gameId].players.forEach((elem) => {
               sendResponseToUserById(
                 elem.user.index,
-                getTurnData(currentUser?.index || ''),
+                getTurnData(currentUser?.index || "")
               );
             });
           }
           break;
         }
 
-        case 'attack':
-        case 'randomAttack': {
+        case "attack":
+        case "randomAttack": {
           const attackData = JSON.parse(userMessage.data) as AttackData;
           const { gameId, indexPlayer } = attackData;
           const currentGame = gamesDatabase.data[gameId];
@@ -153,11 +153,12 @@ export const wssMessageHandler = () => {
           let x: number;
           let y: number;
 
-          if (userMessage.type === 'attack') {
+          if (userMessage.type === "attack") {
             x = attackData.x;
             y = attackData.y;
           } else {
-            const randomPosition = currentGame.players[enemyId].board?.generateRandomAttack();
+            const randomPosition =
+              currentGame.players[enemyId].board?.generateRandomAttack();
             x = randomPosition?.x || 0;
             y = randomPosition?.y || 0;
           }
@@ -165,23 +166,25 @@ export const wssMessageHandler = () => {
           const attackResult = currentGame.players[
             enemyId
           ].board?.getAttackResult(x, y);
-          const isNeedFinishGame = currentGame.players[enemyId].board?.isPlayerLoose();
+          const isNeedFinishGame =
+            currentGame.players[enemyId].board?.isPlayerLoose();
 
           if (isNeedFinishGame) {
             currentGame.players.forEach((elem) => {
+              elem.user.userRoomId = undefined;
               sendResponseToUserById(
                 elem.user.index,
-                getFinishGameData(indexPlayer),
+                getFinishGameData(indexPlayer)
               );
             });
             winnersDatabase.updateWinners(
-              userDatabase.getUserByIndex(indexPlayer)?.name || '',
+              userDatabase.getUserByIndex(indexPlayer)?.name || ""
             );
             sendResponseToAllUsers(wss, getUpdateWinnersData());
           }
 
           if (attackResult) {
-            if (attackResult === 'killed') {
+            if (attackResult === "killed") {
               const missCells = currentGame.players[
                 enemyId
               ].board?.getMissCellsAroundKilledShip({ x, y });
@@ -193,19 +196,20 @@ export const wssMessageHandler = () => {
                     getAttackData(
                       cell?.position || { x: 0, y: 0 },
                       indexPlayer,
-                      'miss',
-                    ),
+                      "miss"
+                    )
                   );
                 });
               });
             }
-            const nextTurn = attackResult === 'miss'
-              ? currentGame.players[enemyId].user.index
-              : indexPlayer;
+            const nextTurn =
+              attackResult === "miss"
+                ? currentGame.players[enemyId].user.index
+                : indexPlayer;
             currentGame.players.forEach((elem) => {
               sendResponseToUserById(
                 elem.user.index,
-                getAttackData({ x, y }, indexPlayer, attackResult),
+                getAttackData({ x, y }, indexPlayer, attackResult)
               );
             });
             currentGame.players.forEach((elem) => {
