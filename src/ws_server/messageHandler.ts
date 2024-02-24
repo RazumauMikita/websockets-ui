@@ -123,7 +123,8 @@ type UserMessageType =
   | "create_room"
   | "add_ships"
   | "attack"
-  | "add_user_to_room";
+  | "add_user_to_room"
+  | "randomAttack";
 type ServerMessageType =
   | "turn"
   | "reg"

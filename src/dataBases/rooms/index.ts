@@ -3,12 +3,13 @@ import { User } from "../../interfaces/user";
 class RoomsDatabase {
   public data: Room[] = [];
 
-  createRoom = (user: User): void => {
+  createRoom = (user: User): number => {
     const newRoom: Room = {
       roomId: this.data.length + 1,
       roomUsers: [user],
     };
     this.data.push(newRoom);
+    return this.data.length - 1;
   };
 
   addUserToRoom = (indexRoom: number, user: Omit<User, "password">) => {
@@ -19,13 +20,8 @@ class RoomsDatabase {
     return this.data.some((elem) => elem.roomUsers[0].index === user.index);
   };
 
-  removeUserRoom = (user: User) => {
-    if (this.isHaveUserRoom(user)) {
-      const roomIndexInData = this.data.findIndex(
-        (elem) => elem.roomUsers[0].index === user.index
-      );
-      delete this.data[roomIndexInData];
-    }
+  removeUserRoom = (roomIndex: number) => {
+    delete this.data[roomIndex];
   };
 
   getRoomById(roomId: number): Room {

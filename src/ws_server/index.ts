@@ -14,15 +14,12 @@ import {
 import { userDatabase } from "../dataBases/users";
 import { roomsDatabase } from "../dataBases/rooms";
 import { IncomingMessage } from "http";
-import { User } from "../interfaces/user";
-import { Game, Player, Ship, gamesDatabase } from "../dataBases/games";
+import { Player, Ship, gamesDatabase } from "../dataBases/games";
 import { winnersDatabase } from "../dataBases/winners";
 
 interface IndexRoom {
   indexRoom: number;
 }
-
-const games: Game[] = [];
 
 const usersSockets = new Map<string, WebSocket>();
 
@@ -45,17 +42,18 @@ const sendResponseToAllUsers = (
 export const wssMessageHandler = () => {
   const wss = new WebSocketServer({ port: 3000 });
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws, req) => {
     let currentUserIndex: string = "";
-    console.log("connect");
+
+    console.log(`connect websocket url: ws:/${req.url}`);
 
     ws.on("close", () => {
       const user = userDatabase.getUserByIndex(currentUserIndex);
-      if (user) {
-        roomsDatabase.removeUserRoom(user);
+      if (user && typeof user.userRoomId === "number") {
+        roomsDatabase.removeUserRoom(user.userRoomId);
+        sendResponseToAllUsers(wss, getUpdateRoomsData());
       }
-      sendResponseToAllUsers(wss, getUpdateRoomsData());
-
+      console.log(`close websocket ${req.url}`);
       ws.close();
     });
 
@@ -76,7 +74,8 @@ export const wssMessageHandler = () => {
           break;
         case "create_room":
           if (currentUser && !roomsDatabase.isHaveUserRoom(currentUser)) {
-            roomsDatabase.createRoom(currentUser);
+            const newRoomIndex: number = roomsDatabase.createRoom(currentUser);
+            currentUser.userRoomId = newRoomIndex;
           }
           sendResponseToAllUsers(wss, getUpdateRoomsData());
           break;
@@ -84,9 +83,10 @@ export const wssMessageHandler = () => {
         case "add_user_to_room":
           const roomData = JSON.parse(userMessage.data) as IndexRoom;
           if (currentUser) {
+            const room = roomsDatabase.getRoomById(roomData.indexRoom);
+            if (room.roomUsers[0].index === currentUser.index) return;
             roomsDatabase.addUserToRoom(roomData.indexRoom, currentUser);
             sendResponseToAllUsers(wss, getUpdateRoomsData());
-            const room = roomsDatabase.getRoomById(roomData.indexRoom);
 
             const players: Player[] = [
               { user: room.roomUsers[0] },
@@ -125,10 +125,23 @@ export const wssMessageHandler = () => {
           }
           break;
         case "attack":
+        case "randomAttack":
           const attackData = JSON.parse(userMessage.data) as AttackData;
-          const { x, y, gameId: gameIndex, indexPlayer: playerId } = attackData;
+          const { gameId: gameIndex, indexPlayer: playerId } = attackData;
           const currentGame = gamesDatabase.data[gameIndex];
           const enemyId = gamesDatabase.getEnemyIndex(playerId, gameIndex);
+          let x: number, y: number;
+
+          if (userMessage.type === "attack") {
+            x = attackData.x;
+            y = attackData.y;
+          } else {
+            const randomPosition =
+              currentGame.players[enemyId].board?.generateRandomAttack();
+            x = randomPosition?.x || 0;
+            y = randomPosition?.y || 0;
+          }
+
           const attackResult = currentGame.players[
             enemyId
           ].board?.getAttackResult(x, y);
@@ -149,6 +162,24 @@ export const wssMessageHandler = () => {
           }
 
           if (attackResult) {
+            if (attackResult === "killed") {
+              const missCells = currentGame.players[
+                enemyId
+              ].board?.getMissCellsAroundKilledShip({ x, y });
+
+              currentGame.players.forEach((player) => {
+                missCells?.forEach((cell) => {
+                  sendResponseToUserById(
+                    player.user.index,
+                    getAttackData(
+                      cell?.position || { x: 0, y: 0 },
+                      playerId,
+                      "miss"
+                    )
+                  );
+                });
+              });
+            }
             const nextTurn =
               attackResult === "miss"
                 ? currentGame.players[enemyId].user.index
