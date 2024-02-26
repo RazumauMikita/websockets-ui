@@ -39,12 +39,15 @@ const usersSockets = new Map<string, WebSocket>();
 const sendResponseToUserById = (userIndex: string, response: ResponseData) => {
   const sock = usersSockets.get(userIndex);
   sock?.send(JSON.stringify(response));
+  process.stdout.write(`Result:  ${response.type}\n`);
 };
 
 const sendResponseToAllUsers = (
   wss: WebSocket.Server<typeof WebSocket, typeof IncomingMessage>,
   response: ResponseData
 ) => {
+  process.stdout.write(`Result:  ${response.type}\n`);
+
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(response));
@@ -58,7 +61,7 @@ export const wssMessageHandler = () => {
   wss.on("connection", (ws, req) => {
     let currentUserIndex: string = "";
 
-    process.stdout.write(`connect websocket url: ws:/${req.url}\n`);
+    process.stdout.write(`connect websocket port: 3000 url: ws:/${req.url}\n`);
 
     ws.on("close", () => {
       const user = userDatabase.getUserByIndex(currentUserIndex);
@@ -73,7 +76,7 @@ export const wssMessageHandler = () => {
     ws.on("message", (data) => {
       const userMessage: ReceivedMessage = JSON.parse(data.toString());
       const currentUser = userDatabase.getUserByIndex(currentUserIndex);
-
+      process.stdout.write(`Received command  ${userMessage.type}\n`);
       switch (userMessage.type) {
         case "reg": {
           const registerResponseMessage = getRegisterData(userMessage.data);
